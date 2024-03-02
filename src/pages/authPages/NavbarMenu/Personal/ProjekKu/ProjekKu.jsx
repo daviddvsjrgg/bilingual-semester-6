@@ -1921,7 +1921,7 @@ const ProjekKu = () => {
                     const padWithZero = (num) => (num < 10 ? '0' : '') + num;
 
                     // Format the date string according to Indonesian locale
-                    const currentDateString = `${padWithZero(currentDate.getDate())} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}, Pukul ${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}:${padWithZero(currentDate.getSeconds())}`;
+                    const currentDateString = `${currentDate.getDate()} ${currentDate.getMonth()} ${currentDate.getFullYear()}, Pukul ${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}:${padWithZero(currentDate.getSeconds())}`;
                     const timeSent = `${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}, ${padWithZero(currentDate.getDate())} ${monthNames[currentDate.getMonth()]}`;
                     
                     try {
