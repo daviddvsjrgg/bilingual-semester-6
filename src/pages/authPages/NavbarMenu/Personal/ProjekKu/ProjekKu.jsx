@@ -861,17 +861,11 @@ const ProjekKu = () => {
                     // Convert the timestamp to a JavaScript Date object
                     const currentDate = currentTimestamp.toDate();
 
-                    // Define month names in Indonesian
-                    const monthNames = [
-                    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-                    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-                    ];
-
                     // Pad single digits with leading zero
                     const padWithZero = (num) => (num < 10 ? '0' : '') + num;
 
                     // Format the date string according to Indonesian locale
-                    const currentDateString = `${padWithZero(currentDate.getDate())} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}, Pukul ${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}:${padWithZero(currentDate.getSeconds())}`;
+                    const currentDateString = `${currentDate.getFullYear()} ${currentDate.getMonth() + 1} ${currentDate.getDate()}, Pukul ${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}:${padWithZero(currentDate.getSeconds())}`;
                     
                     try {
                       const docRef = await addDoc(sectionsCollection, {
@@ -884,7 +878,8 @@ const ProjekKu = () => {
                         setTersimpan(true);
                         setSectionIsOpen(false)
                         setTimeout(() => {
-                            window.location.reload();
+                            setBuatBagianText(false)
+                            setTersimpan(false);
                         }, 3500);
     
                       console.log("Document written with ID: ", docRef.id);
@@ -1078,7 +1073,7 @@ const ProjekKu = () => {
                     const padWithZero = (num) => (num < 10 ? '0' : '') + num;
 
                     // Format the date string according to Indonesian locale
-                    const currentDateString = `${padWithZero(currentDate.getDate())} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}, Pukul ${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}:${padWithZero(currentDate.getSeconds())}`;
+                    const currentDateString = `${currentDate.getFullYear()} ${currentDate.getMonth() + 1} ${currentDate.getDate()}, Pukul ${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}:${padWithZero(currentDate.getSeconds())}`;
                     const dateOrder = `${padWithZero(currentDate.getDate())} ${monthNames[currentDate.getMonth()]}, ${currentDate.getFullYear()}`;
                     
                     try {
@@ -1921,7 +1916,7 @@ const ProjekKu = () => {
                     const padWithZero = (num) => (num < 10 ? '0' : '') + num;
 
                     // Format the date string according to Indonesian locale
-                    const currentDateString = `${currentDate.getDate()} ${currentDate.getMonth()} ${currentDate.getFullYear()}, Pukul ${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}:${padWithZero(currentDate.getSeconds())}`;
+                    const currentDateString = `${currentDate.getFullYear()} ${currentDate.getMonth() + 1} ${currentDate.getDate()}, Pukul ${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}:${padWithZero(currentDate.getSeconds())}`;
                     const timeSent = `${padWithZero(currentDate.getHours())}:${padWithZero(currentDate.getMinutes())}, ${padWithZero(currentDate.getDate())} ${monthNames[currentDate.getMonth()]}`;
                     
                     try {
@@ -4612,7 +4607,12 @@ const ProjekKu = () => {
 
 
                             {/* Section 2 */}
-                            <div className="col-span-7 row-span-3 bg-white border-2 border-gray-200 shadow-md rounded-t-md">
+                            <div className={`${
+                                    projectData.picProject === getCurrentEmail && bagian.titleSection.indexOf("[hidden]") !== -1 ? "opacity-30" 
+                                    : getCurrentRole === "admin" && bagian.titleSection.indexOf("[hidden]") !== -1 ? "opacity-30" 
+                                    : projectData.picProject !== getCurrentEmail && bagian.titleSection.indexOf("[hidden]") !== -1 ? "hidden" 
+                                    : ""}
+                            col-span-7 row-span-3 bg-white border-2 border-gray-200 shadow-md rounded-t-md`}>
                                 <div className="inline-flex bg-gray-300/40 w-full rounded-t-md p-2">
                                     <div className="bg-gray-100 text-gray-800  items-center px-1.5 py-0.5 mt-0.5 rounded-md">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 mt-0.5">
