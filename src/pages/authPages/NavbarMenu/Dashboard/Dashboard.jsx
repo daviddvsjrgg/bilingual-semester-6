@@ -258,7 +258,7 @@ const Dashboard = () => {
                               </a>
                               <a href="/personal" className="hover:border hover:border-slate-400 hover:rounded-md">
                                   <div className="bg-gray-50 border border-gray-200  rounded-lg p-2 md:p-4">
-                                      <a href="/projek" className=" text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-md  mb-2">
+                                      <a href="/personal" className=" text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-md  mb-2">
                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-indigo-600">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                                       </svg>
