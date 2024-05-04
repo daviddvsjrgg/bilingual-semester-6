@@ -14,6 +14,7 @@ import Personal from "./pages/authPages/NavbarMenu/Personal/Personal";
 import Laporan from "./pages/authPages/NavbarMenu/Laporan/Laporan";
 import Kalkulasi from "./pages/authPages/NavbarMenu/Kalkulasi/Kalkulasi";
 import Dashboard from "./pages/authPages/NavbarMenu/Dashboard/Dashboard";
+import IotCatFood from "./pages/authPages/NavbarMenu/Dashboard/IotCatFood/IotCatFood";
 import Url from "./url/Url";
 import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
@@ -146,6 +147,7 @@ function App() {
 
           {/* Protected Routes */}
           <Route path="/" element={<ProtectedRoute element={<Dashboard />} path="/" />} />
+          <Route path="/iot-cat" element={<ProtectedRoute element={<IotCatFood />} path="/iot-cat" allowedRoles={['admin']} />} />
           <Route path="/manajemen-projek" element={<ProtectedRoute element={<ManajemenProjek />} path="/manajemen-projek" allowedRoles={['admin', 'user']} />} />
           <Route path="/manajemen-projek/projek-baru" element={<ProtectedRoute element={<AddManajemenProjek />} path="/manajemen-projek/projek-baru" allowedRoles={['admin']} />} />
           <Route path="/detail-projek" element={<ProtectedRoute element={<DetailProjek />} path="/user-profile-admin" allowedRoles={['admin', 'user']} />} />
