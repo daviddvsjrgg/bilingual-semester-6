@@ -1,11 +1,88 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState} from 'react'
 import NavbarCat from '../../../../../components/Navbar/NabarCat'
 import Bottom from '../../../../../components/BottomBar/Bottom'
-import { onValue, ref } from 'firebase/database';
-import { database } from '../../../../../config/firebase/firebase';
+import { child, onValue, push, ref, set } from 'firebase/database';
+import { auth, database, db } from '../../../../../config/firebase/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import emailjs from '@emailjs/browser';
 
-const Kalkulasi = () => {
 
+const IotCat = () => {
+
+    // User Logged Info
+  const [ username, setUsername ] = useState('');
+  const [ photo, setPhoto ] = useState('');
+  
+  useEffect(()=>{
+    
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/firebase.User
+        const usersCollection = collection(db, "users");
+      
+              try {
+                const querySnapshot = await getDocs(query(usersCollection, where("idUser", "==", user.uid)));
+                // Field from firestore
+                const getUsername = querySnapshot.docs[0].data().usernameUser;
+                const getPhoto = querySnapshot.docs[0].data().imageUser;
+                setUsername(getUsername);
+                setPhoto(getPhoto);
+
+              } catch (error) {
+                console.log("Error: " + error)
+              }
+            
+            // ...
+          
+        });
+        return () => {
+          unsubscribe();
+        }
+  }, [])
+
+    //   Get Berat
+
+    const [loadCellData, setLoadCellData] = useState([]);
+
+    useEffect(() => {
+        const loadCellRef = ref(database, 'data');
+        const unsubscribe = onValue(loadCellRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const sensorData = snapshot.val();
+            const dataArray = Object.entries(sensorData)
+            .map(([sensor, data]) => ({
+                sensor,
+                ...data,
+            }))
+            .filter(item => item.loadCell !== undefined); // Filter only loadCell data
+            setLoadCellData(dataArray);
+        } else {
+            console.log('No data available');
+        }
+        });
+
+        return () => unsubscribe();
+    }, []);
+        
+    //   Get Histories
+    const [histories, setHistories] = useState([]);
+
+    useEffect(() => {
+        const historiesRef = ref(database, 'data/riwayat'); // Reference to the "data/riwayat" path in the database
+
+        // Listen for data changes
+        const unsubscribe = onValue(historiesRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const historyValues = Object.values(data.name).reverse(); // Get an array of nested objects and reverse it
+                setHistories(historyValues);
+            }
+        });
+
+        // Unsubscribe when component unmounts
+        return () => unsubscribe();
+    }, []);
 
     // Waktu UTC+7
     const [ time, setTime ] = useState(new Date());
@@ -26,31 +103,35 @@ const Kalkulasi = () => {
 
     const handleClickBeri = async () => {
         try {
+            
+            const templateParams = {
+                to_name: 'Kelompok 1',
+                from_name: 'IoT - Cat Feeder',
+                message: `Memberi makan pukul: ${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}\n
+                Total Berat Pakan Sekarang: ${loadCellData.map((data) => (data.loadCell))} gram`
+              };
+              
+              emailjs.send('service_j106214', 'template_6sarydr', templateParams, "DYRcVl1en0fQU90Ga").then(
+                (response) => {
+                  console.log('SUCCESS!', response.status, response.text);
+                },
+                (error) => {
+                  console.log('FAILED...', error);
+                },
+              );
+
+
             console.log("jalankan servo")
             setButtonBeriClicked(true)
-            buttonSimpanSehariClicked(true)
             buttonBeriTiapWaktuClicked(true)
-            setTimeout(() => {
-                setButtonBeriClicked(false)
-                buttonSimpanSehariClicked(false)
-                buttonBeriTiapWaktuClicked(false)
-            }, 5000);
-        } catch (error) {
-            console.log(error)
-        }
-    }
 
-    // Makan Berapa Kali Sehari?
-    const [ buttonSimpanSehari, buttonSimpanSehariClicked ] = useState(false)
+            const databaseRef = ref(database);
+            await set(child(databaseRef, 'data/sensor/servo'), 180);
+            setTimeout( async () => {
+                await push(child(databaseRef, 'data/riwayat/name'), `Memberi makan pukul: ${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`);
+            }, 500)
 
-    const handleClickSehari = async () => {
-        try {
-            console.log("jalankan waktu berapa hari sekali?")
-            buttonSimpanSehariClicked(true)
-            setButtonBeriClicked(true)
-            buttonBeriTiapWaktuClicked(true)
             setTimeout(() => {
-                buttonSimpanSehariClicked(false)
                 setButtonBeriClicked(false)
                 buttonBeriTiapWaktuClicked(false)
             }, 5000);
@@ -61,48 +142,102 @@ const Kalkulasi = () => {
 
     // Beri Makan Setiap (waktu) sekali
     const [ buttonBeriTiapWaktu, buttonBeriTiapWaktuClicked ] = useState(false)
+    const [ valueInputTiapWaktu, setValueInputTiapWaktu ] = useState("")
+    // const [ valueInputTiapWaktu2, setValueInputTiapWaktu2 ] = useState("")
+
+    const [timeSensor, setTimeSensor] = useState(null);
+
+    useEffect(() => {
+        const sensorRef = ref(database, 'data/sensor/time'); // Reference to the "data/sensor/time" path in the database
+
+        // Listen for data changes
+        const unsubscribe = onValue(sensorRef, (snapshot) => {
+            const timeValue = snapshot.val();
+            setTimeSensor(timeValue);
+            console.log("awawaw" + timeSensor)
+        });
+
+        // Unsubscribe when component unmounts
+        return () => unsubscribe();
+    }, [timeSensor]);
 
     const handleClickTiapWaktu = async () => {
         try {
-            console.log("jalankan makan tiap waktu")
-            buttonBeriTiapWaktuClicked(true)
-            setButtonBeriClicked(true)
-            buttonSimpanSehariClicked(true)
-            setTimeout(() => {
-                buttonBeriTiapWaktuClicked(false)
-                setButtonBeriClicked(false)
-                buttonSimpanSehariClicked(false)
-            }, 5000);
+            if (valueInputTiapWaktu === "") {
+                console.log("empty")
+                return 0;
+            }
+            const databaseRef = ref(database);
+            console.log("Jalankan makan tiap waktu");
+            console.log(valueInputTiapWaktu);
+            // setValueInputTiapWaktu2(valueInputTiapWaktu)
+            setTimeout( async () => {
+                await set(child(databaseRef, 'data/sensor/time'), valueInputTiapWaktu);
+            }, 500);
+    
+            // Check if the timeout is already set
+                setButtonBeriClicked(true);
+                buttonBeriTiapWaktuClicked(true);
+                
+                setTimeout(() => {
+                    setButtonBeriClicked(false);
+                    buttonBeriTiapWaktuClicked(false);
+                    setValueInputTiapWaktu("")
+                }, 5000);
+                
+                // Set timeoutSet state variable to true
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
-    }
+    };
+    
+    // // Inside your component
+    // const isTimeInRange = (timeString) => {
+    //     // Regular expression to match the format "HH:mm:ss"
+    //     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/;
+    //     if (!timeRegex.test(timeString)) {
+    //         return false; // Invalid format
+    //     }
+    
+    //     const [hours, minutes, seconds] = timeString.split(':').map(Number);
+    //     const timeInMilliseconds = ((hours * 60 * 60) + (minutes * 60) + seconds) * 1000;
+    //     return timeInMilliseconds >= 0 && timeInMilliseconds < 24 * 60 * 60 * 1000;
+    // };
 
-    //   Get Berat
+    // const timeStringToMilliseconds = (timeString) => {
+    //     if (isTimeInRange(timeSensor)) {
+    //         const [hours, minutes, seconds] = timeString.split(':').map(Number);
+    //         return ((hours * 60 * 60) + (minutes * 60) + seconds) * 1000;
+    //     }
+    // };
+    
+    // const delayInMilliseconds = timeStringToMilliseconds(timeSensor);
 
-    const [loadCellData, setLoadCellData] = useState([]);
+    // const timed = `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`
 
-    useEffect(() => {
-      const loadCellRef = ref(database, 'data');
-      const unsubscribe = onValue(loadCellRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const sensorData = snapshot.val();
-          const dataArray = Object.entries(sensorData)
-            .map(([sensor, data]) => ({
-              sensor,
-              ...data,
-            }))
-            .filter(item => item.loadCell !== undefined); // Filter only loadCell data
-          setLoadCellData(dataArray);
-        } else {
-          console.log('No data available');
-        }
-      });
-  
-      return () => unsubscribe();
-    }, []);
-      
-  
+    // // Inside your component
+    // useEffect(() => {
+    //     if (isTimeInRange(timeSensor) && timeSensor !== "00:00:00") {
+    //         const interval = setInterval(() => {
+    //             console.log("in time");
+    //             const databaseRef = ref(database);
+    //             setTimeout( async () => {
+    //                 await push(child(databaseRef, 'data/riwayat/name'), `Memberi makan otomatis pukul: ${timed}`);
+    //                 await set(child(databaseRef, 'data/sensor/servo'), 180);
+    //             }, 100);
+    //             setTimeout(async () => {
+    //                 await set(child(databaseRef, 'data/sensor/servo'), 0);
+    //             }, 2000);
+    //         }, delayInMilliseconds); // 3000 milliseconds = 3 seconds
+            
+    //         return () => clearInterval(interval); // Cleanup function to clear the interval when the component unmounts
+    //     } else {
+    //             console.log("Not doing anything masbro")
+    //     }
+    // }, [valueInputTiapWaktu2, delayInMilliseconds]); // Empty dependency array ensures the effect runs only once when the component mounts
+
+    
+
   
 
 
@@ -219,35 +354,37 @@ const Kalkulasi = () => {
                                         </div>
                                         <div className="col-start-3 col-end-4">
                                         <div className="card w-auto lg:w-96 mt-2 h-96  bg-gray-50/75 shadow-xl p-5">
-                                        <label className="form-control w-full max-w-xs">
-                                        <div className="label">
-                                            <span className="label-text">Sehari berapa kali makan?</span>
-                                        </div>
-                                        <input type="text" placeholder="contoh: 4" className="input input-bordered w-full max-w-xs" />
-                                        <div className="label">
-                                            <span className="label-text-alt invisible">Bottom </span>
-                                            <span className="label-text-alt">
-                                                {buttonSimpanSehari ? (
-                                                    <>
-                                                        <button
-                                                        disabled
-                                                        className="rounded-md h-8 text-white bg-indigo-300 animate-pulse transition-all duration-200 w-28 mt-1">Loading...</button>
-                                                    </>
-                                                ): (
-                                                    <>
-                                                        <button 
-                                                        onClick={handleClickSehari}
-                                                        className="rounded-md h-8 text-white bg-indigo-500 hover:text-white hover:bg-indigo-600 transition-all duration-200 hover:scale-110  w-28 mt-1">Simpan</button>
-                                                    </>
-                                                )}
-                                            </span>
-                                        </div>    
-                                        </label>
+                                        <div className="chat chat-start">
+                                            <div className="chat-image avatar">
+                                                <div className="w-10 rounded-full">
+                                                <img alt="Tailwind CSS chat bubble component" src="https://media.istockphoto.com/id/1397756029/photo/bengal-cat-in-glasses-works-at-the-table-on-the-computer.webp?b=1&s=170667a&w=0&k=20&c=z4nF4zXkZf9hI9ldIahGYw_fColmKNwtabi7aJk-QLw=" />
+                                                </div>
+                                            </div>
+                                            <div className="chat-header">
+                                                Kucingku
+                                            </div>
+                                            <div className="chat-bubble">Kucing makan setiap: {timeSensor}</div>
+                                            </div>
+                                            <div className="chat chat-end">
+                                            <div className="chat-image avatar">
+                                                <div className="w-10 rounded-full">
+                                                <img alt="Tailwind CSS chat bubble component" src={photo} />
+                                                </div>
+                                            </div>
+                                            <div className="chat-header">
+                                                {username}
+                                            </div>
+                                            <div className="chat-bubble">Ok</div>
+                                            </div>
                                         <label className="form-control w-full max-w-xs">
                                         <div className="label">
                                             <span className="label-text">Beri makan Otomatis</span>
                                         </div>
-                                        <input type="text" placeholder="contoh: 00:01:00 (Setiap 1 menit)" className="input input-bordered w-full max-w-xs" />
+                                        <input
+                                         onChange={ (e) => {
+                                            setValueInputTiapWaktu(e.target.value)
+                                        }} 
+                                        type="text" placeholder="contoh: 00:01:00 (Setiap 1 menit)" className="input input-bordered w-full max-w-xs" />
                                         <div className="label">
                                             <span className="label-text-alt invisible">Bottom </span>
                                             <span className="label-text-alt">
@@ -279,24 +416,17 @@ const Kalkulasi = () => {
                                             <div className="divider"></div> 
                                             </div>
                                             <ul class="max-w-md space-y-1 text-gray-500 list-inside dark:text-gray-400 overflow-x-hidden overflow-y-scroll">
-                                                <li class="flex items-center">
-                                                    <svg class="w-3.5 h-3.5 me-2 text-green-500 dark:text-green-400 flex-shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
-                                                    </svg>
-                                                    At least 10 characters
+                                            {histories.map((history, index) => (
+                                                <li key={index}>
+                                                    {/* Add more properties if needed */}
+                                                    <li class="flex items-center">
+                                                        <svg class="w-3.5 h-3.5 me-2 text-green-500 dark:text-green-400 flex-shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
+                                                        </svg>
+                                                        {history}
+                                                    </li>
                                                 </li>
-                                                <li class="flex items-center">
-                                                    <svg class="w-3.5 h-3.5 me-2 text-green-500 dark:text-green-400 flex-shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
-                                                    </svg>
-                                                    At least 10 characters
-                                                </li>
-                                                <li class="flex items-center">
-                                                    <svg class="w-3.5 h-3.5 me-2 text-green-500 dark:text-green-400 flex-shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
-                                                    </svg>
-                                                    At least 10 characters
-                                                </li>
+                                            ))}
                                             </ul>
 
                                         </div>
@@ -317,4 +447,4 @@ const Kalkulasi = () => {
   )
 }
 
-export default Kalkulasi
+export default IotCat
