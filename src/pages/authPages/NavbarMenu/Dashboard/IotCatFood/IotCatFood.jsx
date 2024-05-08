@@ -104,6 +104,18 @@ const IotCat = () => {
     const handleClickBeri = async () => {
         try {
             
+           
+
+            console.log("jalankan servo")
+            setButtonBeriClicked(true)
+            buttonBeriTiapWaktuClicked(true)
+
+            const databaseRef = ref(database);
+            await set(child(databaseRef, 'data/sensor/servo'), 180);
+            setTimeout( async () => {
+                await push(child(databaseRef, 'data/riwayat/name'), `Memberi makan pukul: ${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`);
+            }, 500)
+
             const templateParams = {
                 to_name: 'Kelompok 1',
                 from_name: 'IoT - Cat Feeder',
@@ -120,16 +132,6 @@ const IotCat = () => {
                 },
               );
 
-
-            console.log("jalankan servo")
-            setButtonBeriClicked(true)
-            buttonBeriTiapWaktuClicked(true)
-
-            const databaseRef = ref(database);
-            await set(child(databaseRef, 'data/sensor/servo'), 180);
-            setTimeout( async () => {
-                await push(child(databaseRef, 'data/riwayat/name'), `Memberi makan pukul: ${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`);
-            }, 500)
 
             setTimeout(() => {
                 setButtonBeriClicked(false)
