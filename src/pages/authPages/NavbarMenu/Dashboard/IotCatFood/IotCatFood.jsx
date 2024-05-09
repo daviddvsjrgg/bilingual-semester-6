@@ -1,7 +1,7 @@
 import React, { useEffect, useState} from 'react'
 import NavbarCat from '../../../../../components/Navbar/NabarCat'
 import Bottom from '../../../../../components/BottomBar/Bottom'
-import { child, onValue, push, ref, set } from 'firebase/database';
+import { child, onValue, ref, set } from 'firebase/database';
 import { auth, database, db } from '../../../../../config/firebase/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -94,12 +94,16 @@ const IotCat = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const year = time.getFullYear();
+    const month = time.getMonth();
+    const date = time.getDate();
     const hours = time.getHours();
     const minutes = time.getMinutes();
     const seconds = time.getSeconds();
 
     // Beri Makan Langsung
     const [ buttonBeriClicked, setButtonBeriClicked ] = useState(false)
+    const [ tambahPakan, setTambahPakan ] = useState("")
 
     const handleClickBeri = async () => {
         try {
@@ -111,11 +115,19 @@ const IotCat = () => {
             buttonBeriTiapWaktuClicked(true)
 
             const databaseRef = ref(database);
+            if (loadCellData.map((data) => (data.loadCell)) < 31) {
+                buttonBeriTiapWaktuClicked(false);
+                setButtonBeriClicked(false);
+                setTambahPakan("Pakan kucing hampir habis, isi ulang!");
+                return 0
+            }
             await set(child(databaseRef, 'data/sensor/servo'), 180);
             setTimeout( async () => {
-                await push(child(databaseRef, 'data/riwayat/name'), `Memberi makan pukul: ${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`);
+                // await set(child(databaseRef, `data/riwayat/name/${hours}:${minutes}:${seconds}:${day}:${month}`), `Memberi makan pukul: ${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`);
+                await set(child(databaseRef, `data/riwayat/name/${year}:${month+1}:${date}:${hours}:${minutes}:${seconds}`), `Memberi makan pukul: ${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`);
             }, 500)
-
+            setTambahPakan("")
+            
             const templateParams = {
                 to_name: 'Kelompok 1',
                 from_name: 'IoT - Cat Feeder',
@@ -156,26 +168,67 @@ const IotCat = () => {
         const unsubscribe = onValue(sensorRef, (snapshot) => {
             const timeValue = snapshot.val();
             setTimeSensor(timeValue);
-            console.log("awawaw" + timeSensor)
+            console.log("Db Time: " + timeSensor)
         });
 
         // Unsubscribe when component unmounts
         return () => unsubscribe();
     }, [timeSensor]);
 
+    
+    
     const handleClickTiapWaktu = async () => {
         try {
+            const addTimes = (currentTimeNow, valueInputTiapWaktu) => {
+                // Split the current time and input time into hours, minutes, and seconds
+                const [currentHours, currentMinutes, currentSeconds] = currentTimeNow.split(':').map(Number);
+                const [inputHours, inputMinutes, inputSeconds] = valueInputTiapWaktu.split(':').map(Number);
+            
+                // Calculate the total seconds of input time
+                const totalInputSeconds = inputHours * 3600 + inputMinutes * 60 + inputSeconds;
+            
+                // Initialize an array to store the result times
+                const result = [];
+            
+                // Iterate to generate the sequence of times
+                // for (let i = 0; i < 24 * 60 * 60 / totalInputSeconds; i++) { // Loop for a 24-hour cycle
+                for (let i = 0; i < 10; i++) { // Loop for a 24-hour cycle
+                    const totalSeconds = currentHours * 3600 + currentMinutes * 60 + currentSeconds;
+                    const newTotalSeconds = totalSeconds + totalInputSeconds * i;
+            
+                    // Calculate new hours, minutes, and seconds
+                    const hours = Math.floor(newTotalSeconds / 3600) % 24;
+                    const minutes = Math.floor((newTotalSeconds % 3600) / 60);
+                    const seconds = newTotalSeconds % 60;
+            
+                    // Format the time and add it to the result array
+                    const formattedTime = `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+                    result.push(formattedTime);
+                }
+            
+                return result;
+            };    
             if (valueInputTiapWaktu === "") {
                 console.log("empty")
                 return 0;
             }
             const databaseRef = ref(database);
             console.log("Jalankan makan tiap waktu");
-            console.log(valueInputTiapWaktu);
             // setValueInputTiapWaktu2(valueInputTiapWaktu)
             setTimeout( async () => {
                 await set(child(databaseRef, 'data/sensor/time'), valueInputTiapWaktu);
             }, 500);
+            const currentTimeNow = `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${seconds < 10 ? '0' + seconds : seconds}`
+            
+            console.log(valueInputTiapWaktu);
+            console.log(currentTimeNow);
+
+             // Test the function
+            const times = addTimes(currentTimeNow, valueInputTiapWaktu);
+            console.log(times.join(', '));
+            await set(child(databaseRef, 'data/sensor/schedule'), times.join(','));
+            
+            
     
             // Check if the timeout is already set
                 setButtonBeriClicked(true);
@@ -336,6 +389,13 @@ const IotCat = () => {
                                         <div className="card-body items-center text-center">
                                             <h2 className="card-title">Meow!</h2>
                                             <p>Beri makan kucing sekarang?</p>
+                                            {tambahPakan ? (
+                                                <>
+                                                    <p className='text-red-600'>{tambahPakan}</p>
+                                                </>
+                                            ) : (
+                                                <></>
+                                            )}
                                             <div className="card-actions">
                                             {buttonBeriClicked ? (
                                                 <>
